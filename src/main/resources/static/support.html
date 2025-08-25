@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>聯絡客服 - PageRealm</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+<header>
+  <div class="nav"></div>
+</header>
+<main class="container">
+  <div class="card">
+    <h2>聯絡客服</h2>
+    <div id="msg"></div>
+    <details open>
+      <summary>建立新工單</summary>
+      <form id="ticketForm" class="form">
+        <div class="row">
+          <label>聯絡人</label>
+          <input id="contactName" placeholder="請輸入聯絡人" />
+        </div>
+        <div class="row">
+          <label>電子郵件</label>
+          <input id="contactEmail" placeholder="example@email.com" />
+        </div>
+        <div class="row">
+          <label>問題類型</label>
+          <select id="category">
+            <option value="ACCOUNT">註冊 / 帳戶</option>
+            <option value="BILLING">帳單 / 付款</option>
+            <option value="TECHNICAL">技術問題</option>
+            <option value="GENERAL">一般問題</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>標題</label>
+          <input id="subject" placeholder="請輸入標題" />
+        </div>
+        <div class="row">
+          <label>問題說明</label>
+          <textarea id="content" rows="5" placeholder="請描述您的問題"></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit">確認送出</button>
+        </div>
+      </form>
+    </details>
+
+    <div class="hr"></div>
+
+    <details>
+      <summary>查看我的工單</summary>
+      <div id="myTickets"></div>
+    </details>
+
+    <div id="ticketDetail" style="display:none; margin-top:16px;"></div>
+  </div>
+</main>
+
+<script type="module">
+  import { UserAPI, SupportAPI } from '/js/api.js';
+  import { byId, showAlert } from '/js/ui.js';
+
+  const msg = byId('msg');
+  const form = byId('ticketForm');
+
+  async function prefill() {
+    const me = await UserAPI.me();
+    byId('contactName').value = me.username || me.userName || '';
+    byId('contactEmail').value = me.email || '';
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      contactName: byId('contactName').value.trim(),
+      contactEmail: byId('contactEmail').value.trim(),
+      category: byId('category').value,
+      subject: byId('subject').value.trim(),
+      content: byId('content').value.trim(),
+    };
+    if (!payload.contactName || !payload.contactEmail || !payload.subject || !payload.content) {
+      return showAlert(msg, { type: 'error', text: '請完整填寫必要欄位' });
+    }
+    try {
+      const ticket = await SupportAPI.createTicket(payload);
+      showAlert(msg, { type: 'success', text: '已送出，客服將儘速回覆' });
+      await loadMyTickets();
+      form.reset();
+      await prefill();
+      openDetail(ticket.id);
+    } catch (e) {
+      showAlert(msg, { type: 'error', text: e.message || '送出失敗' });
+    }
+  });
+
+  async function loadMyTickets() {
+    const list = await SupportAPI.myTickets();
+    const host = byId('myTickets');
+    host.innerHTML = '';
+    if (!list || !list.length) { host.textContent = '尚無工單'; return; }
+    const ul = document.createElement('ul');
+    list.forEach(t => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.className = 'secondary';
+      btn.textContent = `#${t.id} [${t.status}] ${t.subject}`;
+      btn.addEventListener('click', () => openDetail(t.id));
+      li.appendChild(btn);
+      ul.appendChild(li);
+    });
+    host.appendChild(ul);
+  }
+
+  async function openDetail(id) {
+    const d = await SupportAPI.ticketDetail(id);
+    const box = byId('ticketDetail');
+    box.style.display = 'block';
+    box.innerHTML = '';
+    const header = document.createElement('div');
+    header.innerHTML = `<h3>工單 #${d.id} - ${d.subject} <span class="badge">${d.status}</span></h3>`;
+
+    const thread = document.createElement('div');
+    thread.className = 'thread';
+    d.messages.forEach(m => {
+      const item = document.createElement('div');
+      item.className = m.sender === 'AGENT' ? 'msg agent' : 'msg user';
+      const who = m.sender === 'AGENT' ? '客服' : '我';
+      item.innerHTML = `<div class="who">${who}</div><div class="body">${escapeHtml(m.content)}</div><div class="time">${m.createdAt || ''}</div>`;
+      thread.appendChild(item);
+    });
+
+    const reply = document.createElement('form');
+    reply.innerHTML = `
+      <div class="row"><textarea id="replyText" rows="3" placeholder="輸入訊息..."/></div>
+      <div class="actions"><button type="submit">送出訊息</button></div>
+    `;
+    reply.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = (byId('replyText').value || '').trim();
+      if (!text) return;
+      try {
+        await SupportAPI.addMessage(id, text);
+        byId('replyText').value = '';
+        await openDetail(id);
+        await loadMyTickets();
+      } catch (err) {
+        showAlert(msg, { type: 'error', text: err.message || '送出失敗' });
+      }
+    });
+
+    box.append(header, thread, reply);
+  }
+
+  function escapeHtml(str) {
+    const p = document.createElement('p');
+    p.textContent = str;
+    return p.innerHTML;
+  }
+
+  (async () => {
+    try {
+      await prefill();
+      await loadMyTickets();
+    } catch (e) {
+      showAlert(msg, { type: 'error', text: '尚未登入或憑證失效，請重新登入' });
+      setTimeout(() => { window.location.replace('/login.html'); }, 1000);
+    }
+  })();
+</script>
+<script type="module" src="/js/ui.js"></script>
+</body>
+</html>
+
