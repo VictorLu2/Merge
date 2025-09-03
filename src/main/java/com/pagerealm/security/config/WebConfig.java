@@ -22,9 +22,6 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${frontend.url}")
     private String frontendUrl;
 
-    @Value("${app.upload.avatar-dir}")
-    private String avatarDir;
-
 
     @Bean
     public WebMvcConfigurer corsConfigurer(){
@@ -50,14 +47,15 @@ public class WebConfig implements WebMvcConfigurer {
                         .maxAge(3600);
             }
 
-            //User Avatar檔案上傳路徑
-            @Override
-            public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                String location = "file:" + (avatarDir.endsWith("/") ? avatarDir : avatarDir + "/");
-                registry.addResourceHandler("/images/**")
-                        .addResourceLocations(location)
-                        .setCachePeriod(3600);
-            }
+            //User Avatar檔案上傳路徑 (已改用AWS S3儲存)
+//            @Override
+//            public void addResourceHandlers(ResourceHandlerRegistry registry) {
+//
+//                String fileLocation = Paths.get(avatarDir).toAbsolutePath().normalize().toUri().toString();
+//                registry.addResourceHandler("/images/**")
+//                        .addResourceLocations(fileLocation)   // 例：file:/var/app/uploads/avatar/
+//                        .setCachePeriod(3600);
+//            }
         };
     }
 

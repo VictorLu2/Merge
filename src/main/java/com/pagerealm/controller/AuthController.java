@@ -12,6 +12,8 @@ import com.pagerealm.entity.Role;
 import com.pagerealm.entity.User;
 import com.pagerealm.repository.RoleRepository;
 import com.pagerealm.repository.UserRepository;
+import com.pagerealm.s3.S3Buckets;
+import com.pagerealm.s3.S3Service;
 import com.pagerealm.security.jwt.JwtUtils;
 import com.pagerealm.security.service.UserDetailsImpl;
 import com.pagerealm.service.TotpService;
@@ -22,6 +24,7 @@ import jakarta.validation.Valid;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -59,18 +62,25 @@ public class AuthController {
     private RoleRepository roleRepository;
     private PasswordEncoder passwordEncoder;
     private UserService userService;
+    //S3
+    private final S3Service s3Service;
+    private final S3Buckets s3Buckets;
 
-    public AuthController(JwtUtils jwtUtils, AuthenticationManager authenticationManager, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, UserService userService, AuthUtil authUtil, TotpService totpService) {
+    @Value("${aws.s3.default-avatar-key}")
+    private String defaultAvatarKey;
+
+    public AuthController(AuthUtil authUtil, TotpService totpService, JwtUtils jwtUtils, AuthenticationManager authenticationManager, UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, UserService userService, S3Service s3Service, S3Buckets s3Buckets) {
+        this.authUtil = authUtil;
+        this.totpService = totpService;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.userService = userService;
-        this.authUtil = authUtil;
-        this.totpService = totpService;
+        this.s3Service = s3Service;
+        this.s3Buckets = s3Buckets;
     }
-
 
     //-----Signin, Signup (logout前端負責)-----
     @PostMapping("/public/signin")
@@ -151,6 +161,7 @@ public class AuthController {
         );
         String rawCode = userService.generateVerificationCode();
         String hashCode = DigestUtils.sha256Hex(rawCode);
+        String defaultAvatarUrl = s3Service.buildPublicUrl(s3Buckets.getUser(), defaultAvatarKey);
 
         userService.buildAndSendVerificationEmail(rawCode, user.getEmail());
 
@@ -158,7 +169,7 @@ public class AuthController {
         user.setMembershipTier(MembershipTier.LV1);
         user.setTotpEnabled(false);
         user.setSignedMethod("email");
-        user.setAvatarUrl("/images/Avatar_default.png");
+        user.setAvatarUrl(defaultAvatarUrl);
         user.setVerificationCode(hashCode);
         user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(10));
 

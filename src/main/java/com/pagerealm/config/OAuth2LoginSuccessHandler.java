@@ -90,7 +90,6 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
                 throw new RuntimeException("Default role not found");
             }
             newUser.setEnabled(true);
-            newUser.setAvatarUrl("/images/Avatar_default.png");
             newUser.setMembershipTier(MembershipTier.LV1);
             newUser.setRole(userRole.get());
             newUser.setEmail(email);
@@ -136,14 +135,14 @@ public class OAuth2LoginSuccessHandler extends SavedRequestAwareAuthenticationSu
         if (user.isTotpEnabled()) {
             // 啟用 TOTP：回傳 require2fa 與 tempJwt
             String tempJwt = jwtUtils.generateTempTokenFor2FA(userDetails);
-            targetUrl = UriComponentsBuilder.fromUriString("https://oauth.pstmn.io/v1/callback") //記得改回(frontendUrl + "/oauth2/redirect")
+            targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/redirect")
                     .queryParam("require2fa", true)
                     .queryParam("tempJwt", tempJwt)
                     .build().toUriString();
         } else {
             // 未啟用 TOTP：直接回傳正式 JWT
             String jwtToken = jwtUtils.generateTokenFromUserEmail(userDetails);
-            targetUrl = UriComponentsBuilder.fromUriString("https://oauth.pstmn.io/v1/callback") //記得改回(frontendUrl + "/oauth2/redirect")
+            targetUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth2/redirect")
                     .queryParam("token", jwtToken)
                     .build().toUriString();
         }

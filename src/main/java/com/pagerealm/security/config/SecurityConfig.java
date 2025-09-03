@@ -58,7 +58,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         //.requestMatchers("/api/csrf-token").permitAll()
                         .requestMatchers("/api/auth/public/**").permitAll()
+                        .requestMatchers("/images/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
+                        // 優惠券：分級控制
+                        .requestMatchers("api/coupons/*/validate").permitAll()
+                        // 優惠券：分級控制
+                        //CMS前端測試用
+                        .requestMatchers(
+                                "/", "/index.html", "/login.html",
+                                "/CMS/**",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico"
+                        ).permitAll()
+                        //CMS前端測試用
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> {
                     oauth2.successHandler(oAuth2LoginSuccessHandler);

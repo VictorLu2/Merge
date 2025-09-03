@@ -1,6 +1,6 @@
 package com.pagerealm.controller;
 
-import com.pagerealm.dto.response.MembershipStatusDTO;
+import com.pagerealm.dto.MembershipStatusDTO;
 import com.pagerealm.entity.User;
 import com.pagerealm.repository.UserRepository;
 import com.pagerealm.service.MembershipService;

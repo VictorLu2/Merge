@@ -23,6 +23,7 @@ public class UserInfoResponse {
     private boolean enabled;
     private boolean totpEnabled;
     private List<String> roles;
+    private String signedMethod;
 
     public UserInfoResponse(Long id, String username,
                             String email,
@@ -32,7 +33,8 @@ public class UserInfoResponse {
                             String avatarUrl,
                             boolean enabled,
                             boolean totpEnabled,
-                            List<String> roles) {
+                            List<String> roles,
+                            String signedMethod) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -43,5 +45,6 @@ public class UserInfoResponse {
         this.enabled = enabled;
         this.totpEnabled = totpEnabled;
         this.roles = roles;
+        this.signedMethod = signedMethod;
     }
 }

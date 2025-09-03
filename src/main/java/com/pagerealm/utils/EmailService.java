@@ -37,8 +37,8 @@ public class EmailService {
     public void sendPasswordResetEmail(String to, String resetUrl){
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
-        message.setSubject("Password Reset Request");
-        message.setText("Click the link to reset your password: " + resetUrl);
+        message.setSubject("Page Realm 密碼重置信件");
+        message.setText("請點擊連結完成密碼重置： " + resetUrl);
         mailSender.send(message);
     }
 

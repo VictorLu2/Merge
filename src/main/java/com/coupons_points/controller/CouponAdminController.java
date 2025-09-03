@@ -42,4 +42,3 @@ public class CouponAdminController {
         return couponService.changeStatus(id, status);
     }
 }
-

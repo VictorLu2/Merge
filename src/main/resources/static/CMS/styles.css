@@ -1,0 +1,269 @@
+:root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --muted: #8b949e;
+    --primary: #1f6feb;
+    --accent: #238636;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+}
+
+.side {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.brand {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.user-mini {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.side nav {
+    display: grid;
+    gap: 6px;
+}
+
+.side a {
+    display: block;
+    padding: 8px 10px;
+    color: var(--text);
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.side a:hover {
+    background: #0b182e;
+}
+
+.side a.active {
+    background: #0b2447;
+    border: 1px solid #163766;
+}
+
+.btn {
+    padding: 8px 12px;
+    background: var(--primary);
+    color: #fff;
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn.small {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.btn.secondary {
+    background: #30363d;
+}
+
+.btn.danger {
+    background: #b42318;
+}
+
+.main {
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.topbar {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.content-section {
+    display: none;
+    padding: 16px;
+    max-width: none;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.grid {
+    display: grid;
+    gap: 16px;
+}
+
+.grid.cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 巢狀 grid：讓左欄堆兩塊卡片時，與右欄等高���排 */
+.grid.cols-2 > .grid {
+    grid-template-rows: 1fr auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+}
+
+table.compact {
+    border-collapse: separate;
+    border-spacing: 0 6px;
+}
+
+thead {
+    background: #0f172a;
+}
+
+th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: middle;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+}
+
+.form-grid label {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.form-grid input, .form-grid select, .form-grid textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #0b1220;
+    color: var(--text);
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.inline {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* 單行不換行與省略號 */
+.nowrap { white-space: nowrap; }
+.ellipsis { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 管理操作記錄表格：固定欄寬，避免擠壓換行 */
+table.tbl-logs { table-layout: fixed; }
+.tbl-logs th:nth-child(1),
+.tbl-logs td:nth-child(1) { width: 64px; }
+.tbl-logs th:nth-child(2),
+.tbl-logs td:nth-child(2) { width: 96px; }
+.tbl-logs th:nth-child(3),
+.tbl-logs td:nth-child(3) { width: 100px; }
+.tbl-logs th:nth-child(4),
+.tbl-logs td:nth-child(4) { width: 160px; }
+/* Details 欄給較寬空間 */
+.tbl-logs th:nth-child(5),
+.tbl-logs td:nth-child(5) { width: 45%; }
+.tbl-logs th:nth-child(6),
+.tbl-logs td:nth-child(6) { width: 180px; }
+.tbl-logs th:nth-child(7),
+.tbl-logs td:nth-child(7) { width: 96px; }
+
+/* 小螢幕時自適應為可換行（避免看不到資訊） */
+@media (max-width: 920px) {
+  .ellipsis { white-space: normal; overflow: visible; text-overflow: clip; }
+  table.tbl-logs { table-layout: auto; }
+  .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .side {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .grid.cols-2, .grid.cols-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 書籍管理：「編輯 / 刪除」按鈕微幅下移，視覺更置中 */
+#books table td.inline {
+    position: relative;
+    top: 40px;
+}
+
+/* 全站表單輸入背景改為白色 */
+/* 盡量鎖定文字型輸入，避免影響 checkbox/radio/range/file 與按鈕型 input */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+select,
+textarea {
+  background: #fff;
+  color: #000;
+}
+
+/* 覆蓋 .form-grid 內原本的深色背景設定 */
+.form-grid input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+.form-grid select,
+.form-grid textarea {
+  background: #c9d1d9;
+  color: #000;
+}

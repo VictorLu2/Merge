@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -64,7 +65,8 @@ public class UserController {
                 user.getAvatarUrl(),
                 user.isEnabled(),
                 user.isTotpEnabled(),
-                roles
+                roles,
+                user.getSignedMethod()
         );
         return ResponseEntity.ok().body(response);
     }
@@ -133,11 +135,39 @@ public class UserController {
     }
 
     //修改avatar
-    @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadAvatar(@AuthenticationPrincipal UserDetailsImpl userDetails,
-                                               @RequestPart("file") MultipartFile file) {
-        String url = userService.uploadAvatar(userDetails.getId(), file);
-        return ResponseEntity.ok(url);
+    @PostMapping(
+            value = "/avatar",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<Map<String, Object>> uploadAvatar(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestParam("file") MultipartFile file
+    ) {
+        try {
+            // 可選的大小檢查（與 Spring 上限互補）
+            if (file == null || file.isEmpty()) {
+                throw new RuntimeException("檔案不可為空");
+            }
+            if (file.getSize() > 5 * 1024 * 1024) {
+                throw new RuntimeException("檔案超過 5MB 上限");
+            }
+
+            String url = userService.uploadAvatar(userDetails.getId(), file);
+            return ResponseEntity.ok(Map.of("url", url));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
+
+//    @PostMapping(value = "/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+//    public ResponseEntity<String> uploadAvatar(@AuthenticationPrincipal UserDetailsImpl userDetails,
+//                                               @RequestPart("file") MultipartFile file) {
+//        String url = userService.uploadAvatar(userDetails.getId(), file);
+//        return ResponseEntity.ok(url);
+//    }
+
 
 }

@@ -8,6 +8,8 @@ import com.pagerealm.entity.User;
 import com.pagerealm.repository.PasswordResetTokenRepository;
 import com.pagerealm.repository.RoleRepository;
 import com.pagerealm.repository.UserRepository;
+import com.pagerealm.s3.S3Buckets;
+import com.pagerealm.s3.S3Service;
 import com.pagerealm.service.TotpService;
 import com.pagerealm.service.UserService;
 import com.pagerealm.utils.EmailService;
@@ -39,8 +41,8 @@ public class UserServiceImpl implements UserService {
     @Value("${frontend.url}")
     String frontendUrl;
 
-    @Value("${app.upload.avatar-dir}")
-    String avatarDir;
+    @Value("${aws.s3.default-avatar-key}")
+    String defaultAvatarKey;
 
     UserRepository userRepository;
     RoleRepository roleRepository;
@@ -48,15 +50,19 @@ public class UserServiceImpl implements UserService {
     PasswordResetTokenRepository passwordResetTokenRepository;
     EmailService emailService;
     TotpService totpService;
+    // S3
+    private final S3Service s3Service;
+    private final S3Buckets s3Buckets;
 
-
-    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, EmailService emailService, TotpService totpService) {
+    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, EmailService emailService, TotpService totpService, S3Service s3Service, S3Buckets s3Buckets) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailService = emailService;
         this.totpService = totpService;
+        this.s3Service = s3Service;
+        this.s3Buckets = s3Buckets;
     }
 
     //----------------------------------------
@@ -177,13 +183,13 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void buildAndSendVerificationEmail(String rawCode, String email) {
-        String subject = "Account Verification";
+        String subject = "Page Realm 註冊驗證碼";
         String verificationCode = rawCode;
         String htmlMessage = "<html>"
                 + "<body style=\"font-family: Arial, sans-serif;\">"
                 + "<div style=\"background-color: #f5f5f5; padding: 20px;\">"
-                + "<h2 style=\"color: #333;\">Welcome to our app!</h2>"
-                + "<p style=\"font-size: 16px;\">Please enter the verification code below to continue:</p>"
+                + "<h2 style=\"color: #333;\">Welcome to Page Realm!</h2>"
+                + "<p style=\"font-size: 16px;\">請輸入下方驗證碼以完成註冊:</p>"
                 + "<div style=\"background-color: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1);\">"
                 + "<h3 style=\"color: #333;\">Verification Code:</h3>"
                 + "<p style=\"font-size: 18px; font-weight: bold; color: #007bff;\">" + verificationCode + "</p>"
@@ -266,6 +272,7 @@ public class UserServiceImpl implements UserService {
         if (user.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
         }
+        applyDefaultAvatarIfAbsent(user);
         return userRepository.save(user);
     }
 
@@ -343,68 +350,51 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    @Override
-    public String uploadAvatar(Long userId, MultipartFile file) {
+    public String uploadAvatar(Long userId, MultipartFile file){
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("檔案不可為空");
         }
 
-        String contentType = file.getContentType();
-        String ext = switch (contentType != null ? contentType.toLowerCase() : "") {
-            case "image/jpeg" -> "jpg";
-            case "image/png" -> "png";
-            case "image/gif" -> "gif";
-            case "image/webp" -> "webp";
-            default -> null;
-        };
-        if (ext == null) {
-            throw new RuntimeException("不支援的檔案格式");
+        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "";
+        String ext;
+        switch (contentType) {
+            case "image/jpeg": ext = "jpg"; break;
+            case "image/png":  ext = "png"; break;
+            case "image/gif":  ext = "gif"; break;
+            case "image/webp": ext = "webp"; break;
+            default: throw new RuntimeException("不支援的檔案格式");
         }
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 以 email 轉安全檔名：非英數轉底線
+        // 以 email 產生安全檔名
         String safeEmail = user.getEmail().toLowerCase().replaceAll("[^a-z0-9]", "_");
-        String filename = safeEmail + "_avatar." + ext;
+        String key = "avatars/" + safeEmail + "_avatar." + ext;
 
         try {
-            Path dir = Paths.get(avatarDir).normalize().toAbsolutePath();
-            Files.createDirectories(dir);
+            byte[] bytes = file.getBytes();
 
-            Path target = dir.resolve(filename).normalize();
+            // 上傳到 S3 並設為公開讀取
+            s3Service.putObjectWithContentType(s3Buckets.getUser(), key, bytes, contentType);
 
-            // 刪除舊檔（如果是同映射下的檔案）
-            String oldUrl = user.getAvatarUrl();
-            if (oldUrl != null && oldUrl.startsWith("/images/")) {
-                String oldFilename = oldUrl.substring("/images/".length());
-                if (!oldFilename.equals(filename)) {
-                    try {
-                        Files.deleteIfExists(dir.resolve(oldFilename));
-                    } catch (IOException ignored) {
-                    }
-                }
-            }
+            // 建立公開 URL
+            String url = s3Service.buildPublicUrl(s3Buckets.getUser(), key);
 
-            // 儲存新檔（覆寫同名）
-            file.transferTo(target.toFile());
-
-            // 產生可被 ResourceHandler 提供的相對 URL
-            String avatarUrl = "/images/" + filename;
-
-            user.setAvatarUrl(avatarUrl);
+            // 更新使用者頭像 URL
+            user.setAvatarUrl(url);
             userRepository.save(user);
 
-            return avatarUrl;
+            return url;
         } catch (IOException e) {
             throw new RuntimeException("上傳失敗，請稍後再試");
         }
     }
 
+    private void applyDefaultAvatarIfAbsent(User user) {
+        if (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank()) {
+            String url = s3Service.buildPublicUrl(s3Buckets.getUser(), defaultAvatarKey);
+            user.setAvatarUrl(url);
+        }
+    }
 }
-
-
-
-
-
-
-

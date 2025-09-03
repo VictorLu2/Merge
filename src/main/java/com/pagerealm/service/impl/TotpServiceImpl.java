@@ -28,7 +28,7 @@ public class TotpServiceImpl implements TotpService {
     //@Param 2 : String username -> String email (8/14)
     @Override
     public String getQrCodeUrl(GoogleAuthenticatorKey secret, String email) {
-        return GoogleAuthenticatorQRGenerator.getOtpAuthURL("Secure Notes Application", email, secret);
+        return GoogleAuthenticatorQRGenerator.getOtpAuthURL("Page-Realm", email, secret);
     }
 
     @Override

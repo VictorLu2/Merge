@@ -2,6 +2,7 @@ package com.pagerealm.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.pagerealm.security.converter.StringCryptoConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -55,7 +56,7 @@ public class User {
     private boolean enabled;
 
     @Column(name = "totp_secret_enc")
-    @Convert(converter = com.pagerealm.persistence.converter.StringCryptoConverter.class)
+    @Convert(converter = StringCryptoConverter.class)
     private String totpSecret;
 
     @Column(name = "totp_enabled")
@@ -82,7 +83,6 @@ public class User {
     //-------------------------------------
     @ManyToOne(fetch = FetchType.EAGER,cascade = CascadeType.MERGE)
     @JoinColumn(name = "role_id",referencedColumnName = "role_id")
-    @JsonBackReference
     @ToString.Exclude
     private Role role;
 

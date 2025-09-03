@@ -1,4 +1,4 @@
-package com.pagerealm.persistence.converter;
+package com.pagerealm.security.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

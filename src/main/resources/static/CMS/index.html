@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平台管理主控台</title>
+    <link rel="stylesheet" href="/CMS/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function requireAuth() {
+            const token = localStorage.getItem('jwt');
+            if (!token) {
+                window.location.href = '/CMS/login.html';
+            }
+            return token;
+        }
+
+        function logout() {
+            localStorage.removeItem('jwt');
+            localStorage.removeItem('email');
+            localStorage.removeItem('roles');
+            window.location.href = '/CMS/login.html';
+        }
+
+        function setActive(sectionId) {
+            document.querySelectorAll('.content-section').forEach(el => el.style.display = 'none');
+            document.getElementById(sectionId).style.display = 'block';
+            document.querySelectorAll('.side a').forEach(a => a.classList.remove('active'));
+            const link = document.querySelector(`.side a[data-target="${sectionId}"]`);
+            if (link) link.classList.add('active');
+        }
+    </script>
+</head>
+<body onload="requireAuth(); setActive('home');">
+<div class="layout">
+    <aside class="side">
+        <div class="brand">CMS</div>
+        <div class="user-mini">👤 <span id="me"></span></div>
+        <nav><a href="#" data-target="home" onclick="setActive('home')">首頁</a>
+            <a href="#" data-target="users" onclick="setActive('users')">使用者管理</a>
+            <a href="#" data-target="books" onclick="setActive('books')">書籍管理</a>
+            <a href="#" data-target="points" onclick="setActive('points')">點數管理</a>
+            <a href="#" data-target="coupons" onclick="setActive('coupons')">優惠券管理</a>
+            <a href="#" data-target="admin_logs" onclick="setActive('admin_logs')">管理操作記錄</a>
+            <a href="#" data-target="support" onclick="setActive('support')">訊息管理</a>
+            <a href="#" data-target="orders" onclick="setActive('orders')">訂單管理</a>
+        </nav>
+        <button class="btn small" onclick="logout()">登出</button>
+    </aside>
+    <main class="main">
+        <header class="topbar">
+            <div class="title">平台管理</div>
+        </header>
+
+        <section id="home" class="content-section"></section>
+        <section id="users" class="content-section"></section>
+        <section id="books" class="content-section"></section>
+        <section id="points" class="content-section"></section>
+        <section id="coupons" class="content-section"></section>
+        <section id="admin_logs" class="content-section"></section>
+        <section id="support" class="content-section"></section>
+        <section id="orders" class="content-section"></section>
+    </main>
+</div>
+
+<script src="/CMS/app.js"></script>
+</body>
+</html>
