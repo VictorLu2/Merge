@@ -15,6 +15,19 @@ API = {
     supportAdmin: '/api/admin/support',
 };
 
+// 新增：從 config.js 或 localStorage 取得 API Base URL
+const API_BASE = (typeof window !== 'undefined' && window.CMS_CONFIG && window.CMS_CONFIG.API_BASE_URL)
+    || (typeof localStorage !== 'undefined' && localStorage.getItem('apiBaseUrl'))
+    || '';
+
+function withBase(url) {
+    if (!API_BASE) return url; // 同源部署時
+    if (!url) return API_BASE;
+    // 避免重複斜線
+    if (API_BASE.endsWith('/') && url.startsWith('/')) return API_BASE + url.slice(1);
+    return API_BASE + url;
+}
+
 function authHeader() {
     const token = localStorage.getItem('jwt');
     return token ? {'Authorization': `Bearer ${token}`} : {};
@@ -26,7 +39,7 @@ function extractMessage(text) {
 }
 
 async function apiGet(url) {
-    const res = await fetch(url, {headers: {...authHeader()}});
+    const res = await fetch(withBase(url), {headers: {...authHeader()}});
     if (!res.ok) {
         const text = await res.text();
         const err = new Error(extractMessage(text));
@@ -37,7 +50,7 @@ async function apiGet(url) {
 }
 
 async function apiJSON(method, url, bodyObj) {
-    const res = await fetch(url, {
+    const res = await fetch(withBase(url), {
         method,
         headers: {'Content-Type': 'application/json', ...authHeader()},
         body: JSON.stringify(bodyObj || {})
@@ -54,7 +67,7 @@ async function apiJSON(method, url, bodyObj) {
 async function apiForm(method, url, params) {
     const qs = new URLSearchParams(params).toString();
     const sep = url.includes('?') ? '&' : '?';
-    const res = await fetch(url + sep + qs, {method, headers: {...authHeader()}});
+    const res = await fetch(withBase(url + sep + qs), {method, headers: {...authHeader()}});
     if (!res.ok) {
         const text = await res.text();
         const err = new Error(extractMessage(text));
@@ -508,7 +521,7 @@ async function submitBook() {
 async function deleteBook(id) {
     if (!confirm('確定刪除？')) return;
     try {
-        await fetch(API.books + '/' + id, {method: 'DELETE', headers: {...authHeader()}});
+        await fetch(withBase(API.books + '/' + id), {method: 'DELETE', headers: {...authHeader()}});
         await renderBooks();
     } catch (e) {
         alert('刪除失敗：' + e.message);
@@ -533,7 +546,7 @@ async function uploadBookCover(e) {
     try {
         const form = new FormData();
         form.append('file', file);
-        const res = await fetch(API.books + '/upload-cover', { method: 'POST', headers: { ...authHeader() }, body: form });
+        const res = await fetch(withBase(API.books + '/upload-cover'), { method: 'POST', headers: { ...authHeader() }, body: form });
         if (!res.ok) throw new Error(await res.text());
         const url = await res.text();
         document.getElementById('b_cover').value = url.replaceAll('"','');
@@ -818,7 +831,7 @@ async function submitCoupon() {
 async function deleteCoupon(id) {
     if (!confirm('確定刪除？')) return;
     try {
-        await fetch(`${API.couponsAdmin}/${id}`, {method: 'DELETE', headers: {...authHeader()}});
+        await fetch(withBase(`${API.couponsAdmin}/${id}`), {method: 'DELETE', headers: {...authHeader()}});
         await renderCoupons();
     } catch (e) {
         alert('刪除失敗：' + e.message);
@@ -1025,7 +1038,7 @@ async function submitAdminLog() {
 async function deleteAdminLog(id) {
     if (!confirm('確定刪除此記錄？')) return;
     try {
-        await fetch(`${API.adminLogs}/${id}`, {method: 'DELETE', headers: {...authHeader()}});
+        await fetch(withBase(`${API.adminLogs}/${id}`), {method: 'DELETE', headers: {...authHeader()}});
         await loadAdminLogs(0);
     } catch (e) {
         alert('刪除失敗：' + e.message);

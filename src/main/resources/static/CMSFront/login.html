@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平台管理登入</title>
+    <link rel="stylesheet" href="./styles.css">
+    <style>    .login-container {
+        max-width: 420px;
+        margin: 10vh auto;
+        background: #fff;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    .login-container h1 {
+        margin: 0 0 16px;
+        font-size: 20px;
+        color: #000;
+    }
+
+    .form-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .form-row label {
+        font-size: 13px;
+        color: #555;
+    }
+
+    .form-row input {
+        padding: 10px 12px;
+        border: 1px solid #e3e3e3;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #1f6feb;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    .btn:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
+    .muted {
+        color: #888;
+        font-size: 12px;
+    }
+
+    .error {
+        color: #b00020;
+        font-size: 13px;
+        margin-top: 6px;
+    }
+
+    .hidden {
+        display: none;
+    }
+    </style>
+    <script src="./config.js"></script>
+    <script>
+        const API_BASE = (typeof window !== 'undefined' && window.CMS_CONFIG && window.CMS_CONFIG.API_BASE_URL)
+            || (typeof localStorage !== 'undefined' && localStorage.getItem('apiBaseUrl'))
+            || '';
+        function withBase(url) {
+            if (!API_BASE) return url;
+            if (!url) return API_BASE;
+            if (API_BASE.endsWith('/') && url.startsWith('/')) return API_BASE + url.slice(1);
+            return API_BASE + url;
+        }
+        function setLoading(state) {
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = state;
+            btn.textContent = state ? '登入中...' : '登入';
+        }
+
+        async function signin(e) {
+            e.preventDefault();
+            document.getElementById('error').textContent = '';
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            if (!email || !password) {
+                document.getElementById('error').textContent = '請輸入 Email 與密碼';
+                return;
+            }
+            setLoading(true);
+            try {
+                const res = await fetch(withBase('/api/auth/public/signin'), {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email, password})
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.message || '登入失敗');
+                }
+                if (data.require2fa) {
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    document.getElementById('tempJwt').value = data.tempJwt;
+                    return;
+                }
+                // normal login
+                if (data.jwtToken) {
+                    localStorage.setItem('jwt', data.jwtToken);
+                    localStorage.setItem('email', data.email || '');
+                    localStorage.setItem('roles', JSON.stringify(data.roles || []));
+                    window.location.href = 'index.html';
+                } else {
+                    throw new Error('回應格式不正確');
+                }
+            } catch (err) {
+                document.getElementById('error').textContent = err.message;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function verify2FA(e) {
+            e.preventDefault();
+            const code = document.getElementById('totp').value.trim();
+            const tempJwt = document.getElementById('tempJwt').value;
+            if (!code) {
+                document.getElementById('error2').textContent = '請輸入 2FA 驗證碼';
+                return;
+            }
+            document.getElementById('verifyBtn').disabled = true;
+            document.getElementById('verifyBtn').textContent = '驗證中...';
+            try {
+                const params = new URLSearchParams({code, tempJwt});
+                const res = await fetch(withBase('/api/auth/public/verify-totp-login?' + params.toString()), {method: 'POST'});
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || '2FA 驗證失敗');
+                if (data.jwtToken) {
+                    localStorage.setItem('jwt', data.jwtToken);
+                    localStorage.setItem('email', data.email || '');
+                    localStorage.setItem('roles', JSON.stringify(data.roles || []));
+                    window.location.href = 'index.html';
+                }
+            } catch (err) {
+                document.getElementById('error2').textContent = err.message;
+            } finally {
+                document.getElementById('verifyBtn').disabled = false;
+                document.getElementById('verifyBtn').textContent = '送出驗證';
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="login-container">
+    <h1>平台管理登入</h1>
+    <form id="step1" onsubmit="signin(event)">
+        <div class="form-row">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" placeholder="admin@example.com" required>
+        </div>
+        <div class="form-row">
+            <label for="password">密碼</label>
+            <input id="password" name="password" type="password" placeholder="•••••••" required>
+        </div>
+        <button id="loginBtn" class="btn" type="submit">登入</button>
+        <div id="error" class="error"></div>
+        <p class="muted">登入成功後會自動導向主控台。</p>
+    </form>
+
+    <form id="step2" class="hidden" onsubmit="verify2FA(event)">
+        <input type="hidden" id="tempJwt"/>
+        <div class="form-row">
+            <label for="totp">輸入 2FA 驗證碼</label>
+            <input id="totp" name="totp" inputmode="numeric" pattern="\\d*" placeholder="6 位數字" required>
+        </div>
+        <button id="verifyBtn" class="btn" type="submit">送出驗證</button>
+        <div id="error2" class="error"></div>
+        <p class="muted">驗證通過將完成登入。</p>
+    </form>
+</div>
+</body>
+</html>

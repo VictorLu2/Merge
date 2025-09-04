@@ -40,7 +40,7 @@ public class WebConfig implements WebMvcConfigurer {
 
                 // CORS配置路徑2
                 registry.addMapping("/**")
-                        .allowedOrigins(frontendUrl)
+                        .allowedOrigins("http://localhost:5500")
                         .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true)

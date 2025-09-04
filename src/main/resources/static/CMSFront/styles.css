@@ -130,7 +130,7 @@ html, body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* 巢狀 grid：讓左欄堆兩塊卡片時，與右欄等高���排 */
+/* 巢狀 grid：讓左欄堆兩塊卡片時，與右欄等高等排 */
 .grid.cols-2 > .grid {
     grid-template-rows: 1fr auto;
 }

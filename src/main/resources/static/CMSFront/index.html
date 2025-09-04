@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>平台管理主控台</title>
-    <link rel="stylesheet" href="/CMS/styles.css">
+    <link rel="stylesheet" href="./styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="./config.js"></script>
     <script>
         function requireAuth() {
             const token = localStorage.getItem('jwt');
             if (!token) {
-                window.location.href = '/CMS/login.html';
+                window.location.href = 'login.html';
             }
             return token;
         }
@@ -19,7 +20,7 @@
             localStorage.removeItem('jwt');
             localStorage.removeItem('email');
             localStorage.removeItem('roles');
-            window.location.href = '/CMS/login.html';
+            window.location.href = 'login.html';
         }
 
         function setActive(sectionId) {
@@ -63,6 +64,8 @@
     </main>
 </div>
 
-<script src="/CMS/app.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
+
+
